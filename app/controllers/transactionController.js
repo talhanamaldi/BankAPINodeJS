@@ -7,53 +7,52 @@ const { context, trace } = require ("@opentelemetry/api");
 
 // Create and Save a new Transaction
 exports.create = async (req, res) => {
-
   const { user_id, user2_id, amount } = req.body;
 
   try {
 
-    const senderAccount = await Account.findOne({ where: { user_id:user_id } });
-    const receiverAccount = await Account.findOne({ where: { user_id:user2_id } });
-    console.log("before");
-    console.log(senderAccount.balance);
-    console.log(receiverAccount.balance);
+    const [senderAccount, receiverAccount] = await Promise.all([
+      Account.findOne({
+        where: { user_id:user_id },
+        include: [{ model: User, attributes: ['name'] }]
+      }),
+      Account.findOne({
+        where: { user_id: user2_id },
+        include: [{ model: User, attributes: ['name'] }]
+      })
+    ]);
+if (!senderAccount || !receiverAccount) {
+  return res.status(404).send({ message: "Sender or Receiver account not found" });
+}
 
-    if (!senderAccount || !receiverAccount) {
-      return res.status(404).send({ message: "Sender or Receiver account not found" });
-    }
+if (senderAccount.balance < amount) {
+  return res.status(400).send({ message: "Insufficient balance" });
+}
 
-    if (senderAccount.balance < amount) {
-      return res.status(400).send({ message: "Insufficient balance" });
-    }
+const transaction = await Transaction.create({ user_id, user2_id, amount });
 
-    const transaction = await Transaction.create({ user_id, user2_id, amount });
+const senderBalance = senderAccount.balance - amount;
+const receiverBalance = receiverAccount.balance + amount;
 
-    const senderBalance = senderAccount.balance - amount;
-    const receiverBalance = receiverAccount.balance + amount;
-    
-    console.log("after");
-    console.log(senderBalance);
-    console.log(receiverBalance);
+console.log("Updating balances...");
+console.log("Sender new balance:", senderBalance);
+console.log("Receiver new balance:", receiverBalance);
 
-    await senderAccount.update({ balance: senderBalance});
-    await receiverAccount.update({ balance: receiverBalance });
+// Update balances
+await Promise.all([
+  senderAccount.update({ balance: senderAccount.balance - amount }),
+  receiverAccount.update({ balance: receiverAccount.balance + amount })
+]);
 
-    const sender = await User.findOne({ where: { user_id:user_id } });
-    const receiver = await User.findOne({ where: { user_id:user2_id } });
+const formattedResponse = {
+  transaction_id: transaction.transaction_id,
+  User: senderAccount.User,
+  User2: receiverAccount.User,
+  amount: transaction.amount,
+};
 
+res.send(formattedResponse);
 
-    const formattedResponse = {
-      transaction_id: transaction.transaction_id,
-      User: sender,
-      User2: receiver,
-      amount: transaction.amount,
-    };
-    
-
-    res.addSpanData(formattedResponse);
-    res.send(formattedResponse);
-
-    
   } catch (error) {
     res.status(500).send({ message: error.message || "Some error occurred while creating the Transaction." });
   }
@@ -62,21 +61,21 @@ exports.create = async (req, res) => {
 // Retrieve all Transactions
 exports.findAll = async (req, res) => {
   try {
-    const transactions = await Transaction.findAll();
+    const transactions = await Transaction.findAll({
+      include: [
+        { model: User, as: 'Sender', attributes: ['name'] },
+        { model: User, as: 'Receiver', attributes: ['name'] }
+      ]
+    });
+const formattedResponse = transactions.map(transaction => ({
+  transaction_id: transaction.transaction_id,
+  Sender: transaction.Sender ? transaction.Sender.name : null,
+  Receiver: transaction.Receiver ? transaction.Receiver.name : null,
+  amount: transaction.amount,
+}));
 
-    const formattedResponse = await Promise.all(transactions.map(async (transaction) => {
-      const sender = await User.findOne({ where: { user_id: transaction.user_id } });
-      const receiver = await User.findOne({ where: { user_id: transaction.user2_id } });
-    
-      return {
-        transaction_id: transaction.transaction_id,
-        User: sender,
-        User2: receiver,
-        amount: transaction.amount,
-      };
-    }));
-    
-    res.send(formattedResponse);
+res.send(formattedResponse);
+
   } catch (error) {
     res.status(500).send({ message: error.message || "Some error occurred while retrieving transactions." });
   }
