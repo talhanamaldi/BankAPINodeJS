@@ -31,13 +31,6 @@ if (senderAccount.balance < amount) {
 
 const transaction = await Transaction.create({ user_id, user2_id, amount });
 
-const senderBalance = senderAccount.balance - amount;
-const receiverBalance = receiverAccount.balance + amount;
-
-console.log("Updating balances...");
-console.log("Sender new balance:", senderBalance);
-console.log("Receiver new balance:", receiverBalance);
-
 // Update balances
 await Promise.all([
   senderAccount.update({ balance: senderAccount.balance - amount }),
