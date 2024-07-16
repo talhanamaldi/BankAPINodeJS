@@ -43,7 +43,7 @@ const formattedResponse = {
   User2: receiverAccount.User,
   amount: transaction.amount,
 };
-
+res.addSpanData(formattedResponse);
 res.send(formattedResponse);
 
   } catch (error) {
