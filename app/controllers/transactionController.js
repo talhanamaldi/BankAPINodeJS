@@ -2,8 +2,8 @@ const db = require('../models');
 const Transaction = db.Transaction;
 const Account = db.Account;
 const User = db.User;
+const Bank = db.Bank;
 const Op = db.Sequelize.Op;
-const { context, trace } = require ("@opentelemetry/api");
 
 // Create and Save a new Transaction
 exports.create = async (req, res) => {
@@ -14,11 +14,17 @@ exports.create = async (req, res) => {
     const [senderAccount, receiverAccount] = await Promise.all([
       Account.findOne({
         where: { user_id:user_id },
-        include: [{ model: User, attributes: ['name'] }]
+        include: [
+          { model: User },
+          { model: Bank }
+        ]
       }),
       Account.findOne({
         where: { user_id: user2_id },
-        include: [{ model: User, attributes: ['name'] }]
+        include: [
+          { model: User},
+          { model: Bank}
+        ]
       })
     ]);
 if (!senderAccount || !receiverAccount) {
@@ -39,11 +45,12 @@ await Promise.all([
 
 const formattedResponse = {
   transaction_id: transaction.transaction_id,
-  User: senderAccount.User,
-  User2: receiverAccount.User,
+  senderAccount:senderAccount,
+  receiverAccount:receiverAccount,
   amount: transaction.amount,
 };
 
+res.addSpanData(formattedResponse);
 res.send(formattedResponse);
 
   } catch (error) {
