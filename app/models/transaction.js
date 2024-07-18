@@ -1,40 +1,39 @@
 module.exports = (sequelize, DataTypes) => {
-    const Transaction = sequelize.define('Transaction', {
-      transaction_id: {
-        type: DataTypes.INTEGER,
-        primaryKey: true,
-        autoIncrement: true,
+  const Transaction = sequelize.define('Transaction', {
+    transaction_id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    sender_account_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'Account',
+        key: 'account_id',
       },
-      user_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'User',
-          key: 'user_id',
-        },
+    },
+    receiver_account_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'Account',
+        key: 'account_id',
       },
-      user2_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'User',
-          key: 'user_id',
-        },
-      },
-      amount: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-      },
-    }, {
-      tableName: 'Transaction',
-      timestamps: false,
-    });
-  
-    Transaction.associate = (models) => {
-      Transaction.belongsTo(models.User, { as: 'Sender', foreignKey: 'user_id' });
-      Transaction.belongsTo(models.User, { as: 'Receiver', foreignKey: 'user2_id' });
-    };
-  
-    return Transaction;
+    },
+    amount: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+  }, {
+    tableName: 'Transaction',
+    timestamps: false,
+  });
+
+  Transaction.associate = (models) => {
+    Transaction.belongsTo(models.Account, { as: 'SenderAccount', foreignKey: 'sender_account_id' });
+    Transaction.belongsTo(models.Account, { as: 'ReceiverAccount', foreignKey: 'receiver_account_id' });
   };
-  
+
+  return Transaction;
+};

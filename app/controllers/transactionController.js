@@ -7,35 +7,38 @@ const Op = db.Sequelize.Op;
 
 // Create and Save a new Transaction
 exports.create = async (req, res) => {
-  const { user_id, user2_id, amount } = req.body;
+  const { sender_account_id, receiver_account_id, amount } = req.body;
 
   try {
-
     const [senderAccount, receiverAccount] = await Promise.all([
       Account.findOne({
-        where: { user_id:user_id },
+        where: { account_id: sender_account_id },
         include: [
           { model: User },
           { model: Bank }
         ]
       }),
       Account.findOne({
-        where: { user_id: user2_id },
+        where: { account_id: receiver_account_id },
         include: [
-          { model: User},
-          { model: Bank}
+          { model: User },
+          { model: Bank }
         ]
       })
     ]);
 if (!senderAccount || !receiverAccount) {
-  return res.status(404).send({ message: "Sender or Receiver account not found" });
+  return res.status(201).send({ message: "Sender or Receiver account not found" });
 }
 
 if (senderAccount.balance < amount) {
-  return res.status(400).send({ message: "Insufficient balance" });
+  return res.status(201).send({ message: "Insufficient balance" });
 }
 
-const transaction = await Transaction.create({ user_id, user2_id, amount });
+const transaction = await Transaction.create({
+  sender_account_id,
+  receiver_account_id,
+  amount
+});
 
 // Update balances
 await Promise.all([
@@ -45,32 +48,60 @@ await Promise.all([
 
 const formattedResponse = {
   transaction_id: transaction.transaction_id,
-  senderAccount:senderAccount,
-  receiverAccount:receiverAccount,
+  senderAccount: senderAccount,
+  receiverAccount: receiverAccount,
   amount: transaction.amount,
 };
 
-res.addSpanData(formattedResponse);
+res.addSpanAttribute(formattedResponse);
 res.send(formattedResponse);
 
   } catch (error) {
-    res.status(500).send({ message: error.message || "Some error occurred while creating the Transaction." });
+    res.status(201).send({ message: error.message || "Some error occurred while creating the Transaction." });
   }
 };
+
+
 
 // Retrieve all Transactions
 exports.findAll = async (req, res) => {
   try {
     const transactions = await Transaction.findAll({
       include: [
-        { model: User, as: 'Sender', attributes: ['name'] },
-        { model: User, as: 'Receiver', attributes: ['name'] }
+        {
+          model: Account,
+          as: 'SenderAccount',
+          include: [
+            { model: User, attributes: ['name'] },
+            { model: Bank, attributes: ['name'] }
+          ]
+        },
+        {
+          model: Account,
+          as: 'ReceiverAccount',
+          include: [
+            { model: User, attributes: ['name'] },
+            { model: Bank, attributes: ['name'] }
+          ]
+        }
       ]
     });
 const formattedResponse = transactions.map(transaction => ({
   transaction_id: transaction.transaction_id,
-  Sender: transaction.Sender ? transaction.Sender.name : null,
-  Receiver: transaction.Receiver ? transaction.Receiver.name : null,
+  SenderAccount: transaction.SenderAccount
+    ? {
+        user: transaction.SenderAccount.User.name,
+        bank: transaction.SenderAccount.Bank.name,
+        balance: transaction.SenderAccount.balance
+      }
+    : null,
+  ReceiverAccount: transaction.ReceiverAccount
+    ? {
+        user: transaction.ReceiverAccount.User.name,
+        bank: transaction.ReceiverAccount.Bank.name,
+        balance: transaction.ReceiverAccount.balance
+      }
+    : null,
   amount: transaction.amount,
 }));
 
@@ -81,31 +112,62 @@ res.send(formattedResponse);
   }
 };
 
+
 // Find a single Transaction with an id
 exports.findOne = async (req, res) => {
   const id = req.params.id;
 
   try {
-    const transaction = await Transaction.findByPk(id);
-    if (!transaction) {
-      return res.status(404).send({ message: `Transaction with id=${id} not found.` });
-    }
-    const sender = await User.findOne({ where: { user_id:transaction.user_id } });
-    const receiver = await User.findOne({ where: { user_id:transaction.user2_id } });
+    const transaction = await Transaction.findByPk(id, {
+      include: [
+        {
+          model: Account,
+          as: 'SenderAccount',
+          include: [
+            { model: User, attributes: ['name'] },
+            { model: Bank, attributes: ['name'] }
+          ]
+        },
+        {
+          model: Account,
+          as: 'ReceiverAccount',
+          include: [
+            { model: User, attributes: ['name'] },
+            { model: Bank, attributes: ['name'] }
+          ]
+        }
+      ]
+    });
+if (!transaction) {
+  return res.status(404).send({ message: `Transaction with id=${id} not found.` });
+}
 
+const formattedResponse = {
+  transaction_id: transaction.transaction_id,
+  SenderAccount: transaction.SenderAccount
+    ? {
+        user: transaction.SenderAccount.User.name,
+        bank: transaction.SenderAccount.Bank.name,
+        balance: transaction.SenderAccount.balance
+      }
+    : null,
+  ReceiverAccount: transaction.ReceiverAccount
+    ? {
+        user: transaction.ReceiverAccount.User.name,
+        bank: transaction.ReceiverAccount.Bank.name,
+        balance: transaction.ReceiverAccount.balance
+      }
+    : null,
+  amount: transaction.amount,
+};
 
-    const formattedResponse = {
-      transaction_id: transaction.transaction_id,
-      user_name: sender,
-      user2_name: receiver,
-      amount: transaction.amount,
-    };
+res.send(formattedResponse);
 
-    res.send(formattedResponse);
   } catch (error) {
-    res.status(500).send({ message: `Error retrieving Transaction with id=${id}` });
+    res.status(500).send({ message: error.message || "Error retrieving Transaction with id=${id}" });
   }
 };
+
 
 // Update a Transaction by the id in the request
 exports.update = async (req, res) => {
@@ -114,14 +176,52 @@ exports.update = async (req, res) => {
   try {
     const [updated] = await Transaction.update(req.body, { where: { transaction_id: id } });
     if (updated) {
-      const updatedTransaction = await Transaction.findByPk(id);
-      
-      res.send(updatedTransaction);
-    } else {
-      res.status(404).send({ message: `Cannot update Transaction with id=${id}. Maybe Transaction was not found or req.body is empty!` });
-    }
+      const updatedTransaction = await Transaction.findByPk(id, {
+        include: [
+          {
+            model: Account,
+            as: 'SenderAccount',
+            include: [
+              { model: User, attributes: ['name'] },
+              { model: Bank, attributes: ['name'] }
+            ]
+          },
+          {
+            model: Account,
+            as: 'ReceiverAccount',
+            include: [
+              { model: User, attributes: ['name'] },
+              { model: Bank, attributes: ['name'] }
+            ]
+          }
+        ]
+      });
+  const formattedResponse = {
+    transaction_id: updatedTransaction.transaction_id,
+    SenderAccount: updatedTransaction.SenderAccount
+      ? {
+          user: updatedTransaction.SenderAccount.User.name,
+          bank: updatedTransaction.SenderAccount.Bank.name,
+          balance: updatedTransaction.SenderAccount.balance
+        }
+      : null,
+    ReceiverAccount: updatedTransaction.ReceiverAccount
+      ? {
+          user: updatedTransaction.ReceiverAccount.User.name,
+          bank: updatedTransaction.ReceiverAccount.Bank.name,
+          balance: updatedTransaction.ReceiverAccount.balance
+        }
+      : null,
+    amount: updatedTransaction.amount,
+  };
+
+  res.send(formattedResponse);
+} else {
+  res.status(404).send({ message: `Cannot update Transaction with id=${id}. Maybe Transaction was not found or req.body is empty!` });
+}
+
   } catch (error) {
-    res.status(500).send({ message: `Error updating Transaction with id=${id}` });
+    res.status(500).send({ message: error.message || "Error updating Transaction with id=${id}" });
   }
 };
 
