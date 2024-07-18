@@ -1,10 +1,10 @@
 const opentelemetry = require("@opentelemetry/sdk-node");
+const { getNodeAutoInstrumentations } = require("@opentelemetry/auto-instrumentations-node");
+const { OTLPTraceExporter } = require("@opentelemetry/exporter-trace-otlp-proto");
+const { Resource } = require('@opentelemetry/resources');
 const {
-  getNodeAutoInstrumentations,
-} = require("@opentelemetry/auto-instrumentations-node");
-const {
-  OTLPTraceExporter,
-} = require("@opentelemetry/exporter-trace-otlp-proto");
+  SEMRESATTRS_SERVICE_NAME,
+} = require('@opentelemetry/semantic-conventions');
 
 const sdk = new opentelemetry.NodeSDK({
   traceExporter: new OTLPTraceExporter({
@@ -13,6 +13,10 @@ const sdk = new opentelemetry.NodeSDK({
   }),
 
   instrumentations: [getNodeAutoInstrumentations()],
+  resource: new Resource({
+    [SEMRESATTRS_SERVICE_NAME]: 'nodejs_bank_api',
+  }),
 });
+
 
 sdk.start();

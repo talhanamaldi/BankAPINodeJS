@@ -53,7 +53,7 @@ const formattedResponse = {
   amount: transaction.amount,
 };
 
-res.addSpanAttribute(formattedResponse);
+res.addSpanData(formattedResponse);
 res.send(formattedResponse);
 
   } catch (error) {
