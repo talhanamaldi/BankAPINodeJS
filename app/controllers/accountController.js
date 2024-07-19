@@ -4,6 +4,41 @@ const User = db.User;
 const Bank = db.Bank;
 const Op = db.Sequelize.Op;
 
+exports.create = async (req, res) => {
+
+  const {user_id, bank_id, balance} = req.body;
+
+  try{
+    const [user, bank] = await Promise.all([
+      User.findOne({
+        where: { user_id: user_id }
+      }),
+      Bank.findOne({
+        where: { bank_id: bank_id }
+      })
+    ]);
+
+    if (!user || !bank) {
+      //return res.status(201).send({ message: "User or Bank not found" });
+      throw new Error('User or Bank not found error control');
+    }
+
+
+    const account = await Account.create({user_id,bank_id,balance});
+    const formattedResponse = {
+      account_id: account.account_id,
+      user_id: account.user_id,
+      bank_id: account.bank_id,
+      balance: account.balance,
+    };
+    res.send(formattedResponse);
+  }catch (error) {
+      res.status(201).send({ message: error.message || "Some error occurred while creating the Bank." });
+  }
+
+
+};
+
 exports.findAll = async (req, res) => {
   try {
     const accounts = await Account.findAll({

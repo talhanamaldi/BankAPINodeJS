@@ -108,7 +108,7 @@ const formattedResponse = transactions.map(transaction => ({
 res.send(formattedResponse);
 
   } catch (error) {
-    res.status(500).send({ message: error.message || "Some error occurred while retrieving transactions." });
+    res.status(201).send({ message: error.message || "Some error occurred while retrieving transactions." });
   }
 };
 
@@ -139,7 +139,7 @@ exports.findOne = async (req, res) => {
       ]
     });
 if (!transaction) {
-  return res.status(404).send({ message: `Transaction with id=${id} not found.` });
+  return res.status(201).send({ message: `Transaction with id=${id} not found.` });
 }
 
 const formattedResponse = {
@@ -164,7 +164,7 @@ const formattedResponse = {
 res.send(formattedResponse);
 
   } catch (error) {
-    res.status(500).send({ message: error.message || "Error retrieving Transaction with id=${id}" });
+    res.status(201).send({ message: error.message || "Error retrieving Transaction with id=${id}" });
   }
 };
 
@@ -217,11 +217,11 @@ exports.update = async (req, res) => {
 
   res.send(formattedResponse);
 } else {
-  res.status(404).send({ message: `Cannot update Transaction with id=${id}. Maybe Transaction was not found or req.body is empty!` });
+  res.status(201).send({ message: `Cannot update Transaction with id=${id}. Maybe Transaction was not found or req.body is empty!` });
 }
 
   } catch (error) {
-    res.status(500).send({ message: error.message || "Error updating Transaction with id=${id}" });
+    res.status(201).send({ message: error.message || "Error updating Transaction with id=${id}" });
   }
 };
 
@@ -234,10 +234,10 @@ exports.delete = async (req, res) => {
     if (deleted) {
       res.send({ message: "Transaction was deleted successfully!" });
     } else {
-      res.status(404).send({ message: `Cannot delete Transaction with id=${id}. Maybe Transaction was not found!` });
+      res.status(201).send({ message: `Cannot delete Transaction with id=${id}. Maybe Transaction was not found!` });
     }
   } catch (error) {
-    res.status(500).send({ message: `Could not delete Transaction with id=${id}` });
+    res.status(201).send({ message: `Could not delete Transaction with id=${id}` });
   }
 };
 
@@ -247,6 +247,6 @@ exports.deleteAll = async (req, res) => {
     const deleted = await Transaction.destroy({ where: {}, truncate: false });
     res.send({ message: `${deleted} Transactions were deleted successfully!` });
   } catch (error) {
-    res.status(500).send({ message: error.message || "Some error occurred while removing all transactions." });
+    res.status(201).send({ message: error.message || "Some error occurred while removing all transactions." });
   }
 };

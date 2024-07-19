@@ -46,6 +46,9 @@ app.get("/", (req, res) => {
 
 require("./app/routes/transactionRoutes")(app);
 require("./app/routes/accountRoutes")(app);
+require("./app/routes/userRoutes")(app);
+require("./app/routes/bankRoutes")(app);
+require("./app/routes/moneyRoutes")(app);
 
 
 const PORT = process.env.PORT || 8042;
