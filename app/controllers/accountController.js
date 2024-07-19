@@ -19,8 +19,12 @@ exports.create = async (req, res) => {
     ]);
 
     if (!user || !bank) {
-      //return res.status(201).send({ message: "User or Bank not found" });
-      throw new Error('User or Bank not found error control');
+      const errorMessage = {
+        error_no : 201,
+        message : "User or Bank not found"
+      }
+      res.addSpanData(errorMessage,'http.response.post.error');
+      return res.status(201).send({ message: "User or Bank not found" });
     }
 
 

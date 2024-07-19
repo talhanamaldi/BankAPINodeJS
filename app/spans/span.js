@@ -1,10 +1,10 @@
 const { context, trace } = require("@opentelemetry/api");
 
 const addSpanAttribute = (req, res, next) => {
-  res.addSpanData = (data) => {
+  res.addSpanData = (data,spanName) => {
     const currentSpan = trace.getSpan(context.active());
     if (currentSpan) {
-      currentSpan.setAttribute('http.response.post', JSON.stringify(data));
+      currentSpan.setAttribute(spanName, JSON.stringify(data));
     }
   };
   next();
