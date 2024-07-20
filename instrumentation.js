@@ -8,7 +8,7 @@ const {
 
 const sdk = new opentelemetry.NodeSDK({
   traceExporter: new OTLPTraceExporter({
-    url: "http://10.150.238.177:4318/v1/traces",
+    url: "http://0.0.0.0:4318/v1/traces",
     serviceName: "nodeJSAPI",
   }),
 
