@@ -6,7 +6,3 @@ module.exports = {
   dialect: "postgres"
 
 };
-/* docker
-host: '10.150.238.165',
-*/
-/*normal : 'localhost'*/
