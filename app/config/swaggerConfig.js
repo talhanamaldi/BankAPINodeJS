@@ -11,7 +11,7 @@ const options = {
       },
       servers:[
         {
-          url: "http://10.150.238.165:8042/"
+          url: "http://0.0.0.0:8042/"
         }
       ]
 
