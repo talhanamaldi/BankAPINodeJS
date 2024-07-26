@@ -13,6 +13,12 @@ module.exports = app => {
     router.delete("/:id", transactions.delete);
 
     router.delete("/", transactions.deleteAll);
+
+    //account ile transaction bulma
+    router.get("/account/:id",transactions.findAccounts);
+
+    router.put("/withdraw/:id", transactions.withdraw);
+    router.put("/deposit/:id", transactions.deposit);
   
     app.use("/api/transaction", router);
   };

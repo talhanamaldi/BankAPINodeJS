@@ -25,6 +25,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    transaction_time: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
   }, {
     tableName: 'Transaction',
     timestamps: false,

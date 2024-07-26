@@ -8,6 +8,8 @@ exports.create = async (req, res) => {
 
   const {user_id, bank_id, balance} = req.body;
 
+  res.addSpanData(req.body,'http.request.body')
+
   try{
     const [user, bank] = await Promise.all([
       User.findOne({
@@ -18,13 +20,32 @@ exports.create = async (req, res) => {
       })
     ]);
 
-    if (!user || !bank) {
+    if (!user && !bank) {
       const errorMessage = {
         error_no : 201,
-        message : "User or Bank not found"
+        error_description : `User with id=${user_id} and Bank with id=${bank_id} not found while creating Account`,   
+        error_info : {}
       }
-      res.addSpanData(errorMessage,'http.response.post.error');
-      return res.status(201).send({ message: "User or Bank not found" });
+      res.addSpanData(errorMessage,'http.response.error');
+      return res.status(201).send({ message: `User with id=${user_id} and Bank with id=${bank_id} not found while creating Account`});
+    }else if(!user){
+      const errorMessage = {
+        error_no : 201,
+        error_description : `User with id=${user_id} not found while creating Account`,  
+        error_info : {}
+      }
+      res.addSpanData(errorMessage,'http.response.error');
+      return res.status(201).send({ message: `User with id=${user_id} not found while creating Account` });
+
+    }else if(!bank){
+      const errorMessage = {
+        error_no : 201,
+        error_description : `Bank with id=${bank_id} not found while creating Account`,  
+        error_info : {}
+      }
+      res.addSpanData(errorMessage,'http.response.error');
+      return res.status(201).send({ message: `Bank with id=${bank_id} not found while creating Account` });
+
     }
 
 
@@ -35,13 +56,16 @@ exports.create = async (req, res) => {
       bank_id: account.bank_id,
       balance: account.balance,
     };
+    res.addSpanData(formattedResponse,"http.response.post")
     res.send(formattedResponse);
   }catch (error) {
-      res.status(201).send({ message: error.message || "Some error occurred while creating the Bank." });
+      res.status(400).send({ message: error.message || "Some error occurred while creating the Account." });
   }
 
 
 };
+
+
 
 exports.findAll = async (req, res) => {
   try {
@@ -61,6 +85,42 @@ const formattedResponse = accounts.map(account => ({
 res.send(formattedResponse);
 
   } catch (error) {
-    res.status(500).send({ message: error.message || "Some error occurred while retrieving accounts." });
+    res.status(400).send({ message: error.message || "Some error occurred while retrieving accounts." });
   }
 };
+
+
+exports.findOne = async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const account = await Account.findByPk(id,{
+      include: [
+          {model: User,as: 'User'},
+          {model: Bank,as: 'Bank'}
+        ]
+  });
+if (!account) {
+  const errorMessage = {
+    error_no : 201,
+    message : `Account with id=${id} not found.` 
+  }
+  res.addSpanData(errorMessage,'http.response.error');
+  return res.status(201).send({ message: `Account with id=${id} not found.` });
+}
+
+const formattedResponse = {
+  user_name: account.User.name,
+  bank_name: account.Bank.name,
+  balance: account.balance
+};
+
+res.send(formattedResponse);
+
+  } catch (error) {
+    res.status(400).send({ message: error.message || `Error retrieving Account with id=${id}` });
+  }
+};
+
+
+

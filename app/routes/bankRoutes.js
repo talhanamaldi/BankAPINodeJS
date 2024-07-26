@@ -3,6 +3,8 @@ module.exports = app => {
     const router = require("express").Router();
 
     router.post("/", banks.create);
+
+    router.get("/:id", banks.findOne);
   
     app.use("/api/bank", router);
   };

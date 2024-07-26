@@ -17,14 +17,15 @@ app.use("/api-docs", swaggerUI.serve, swaggerUI.setup(swaggerSpec));
 
 app.use(addSpanAttribute); 
 
-app.use((req, res, next) => {
+
+/*app.use((req, res, next) => {
   const currentSpan = trace.getSpan(context.active());
   if (currentSpan && req.method === "POST") {
     currentSpan.setAttribute('http.request.body', JSON.stringify(req.body));
     
   }
   next();
-});
+});*/
 
 
 
@@ -48,7 +49,6 @@ require("./app/routes/transactionRoutes")(app);
 require("./app/routes/accountRoutes")(app);
 require("./app/routes/userRoutes")(app);
 require("./app/routes/bankRoutes")(app);
-require("./app/routes/moneyRoutes")(app);
 
 
 const PORT = process.env.PORT || 8042;
